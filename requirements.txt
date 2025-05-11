@@ -2,3 +2,5 @@ Flask
 openai
 vaderSentiment
 python-dotenv
+flask-cors
+gunicorn
