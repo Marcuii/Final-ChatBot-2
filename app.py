@@ -85,27 +85,26 @@ def submit_answer():
         max_tokens=500,
     )
 
-    feedback_text = feedback_response.choices[0].message.content.strip()
-    
+    full_feedback = feedback_response.choices[0].message.content.strip()
+
     rating = None
-    if "Rating:" in feedback_text:
-        rating_line = [line for line in feedback_text.split('\n') if "Rating:" in line]
-        if rating_line:
-            rating_str = rating_line[0].split(":")[1].strip()
-            match = re.search(r'\d+', rating_str)
+    rating_value = None
+    feedback_lines = full_feedback.split('\n')
+    for line in feedback_lines:
+        if "Rating:" in line:
+            match = re.search(r'\d+', line)
             if match:
-                extracted = int(match.group())
-                if 0 <= extracted <= 10:
-                    rating = extracted
-                else:
-                    rating = None
+                rating_value = int(match.group())
+                break
+
+    # حذف سطر Rating
+    feedback_body = "\n".join([line for line in feedback_lines if not line.strip().startswith("Rating:")])
 
     response = jsonify({
-        'feedback': feedback_text,
-        'rating': rating
+        'feedback': feedback_body.strip(),
+        'rating': rating_value
     })
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
-
 if __name__ == "__main__":
     app.run(debug=True)
