@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import openai
 import os
 import re
@@ -14,7 +15,42 @@ analyzer = SentimentIntensityAnalyzer()
 
 app = Flask(__name__)
 
-# ---- GENERATE QUESTIONS ----
+# القائمة البيضاء للمواقع المسموح لها بالوصول
+ALLOWED_ORIGINS = [
+    "https://vocanova.vercel.app",
+    "https://vocanova.vercel.app/mockup-interview"
+]
+
+# تكوين CORS بدقة
+CORS(app, resources={
+    r"/*": {
+        "origins": ALLOWED_ORIGINS,
+        "methods": ["POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True
+    }
+})
+
+@app.before_request
+def check_origin():
+    """التحقق من أن الطلب قادم من مصدر مسموح به"""
+    if request.method == 'OPTIONS':
+        return
+    
+    origin = request.headers.get('Origin')
+    if origin not in ALLOWED_ORIGINS:
+        return jsonify({"error": "الوصول غير مسموح به لهذا المصدر"}), 403
+
+@app.after_request
+def add_cors_headers(response):
+    """إضافة رؤوس CORS للاستجابات"""
+    if request.headers.get('Origin') in ALLOWED_ORIGINS:
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin'))
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Expose-Headers', 'Content-Type')
+    return response
+
+# ---- وظيفة توليد الأسئلة ----
 def generate_questions(role):
     prompt = (
         f"Generate 3 behavioral and 2 technical interview questions for a {role} role. "
@@ -32,15 +68,21 @@ def generate_questions(role):
     questions = [line.strip() for line in lines if line.strip() and "?" in line]
     return questions
 
-@app.route('/start_interview', methods=['POST'])
+@app.route('/start-interview', methods=['POST', 'OPTIONS'])
 def start_interview():
+    if request.method == 'OPTIONS':
+        return _build_preflight_response()
+    
     data = request.get_json()
     job_role = data.get('job_role', 'Data Scientist')
     questions = generate_questions(job_role)
-    return jsonify({'questions': questions})
+    return _build_actual_response(jsonify({'questions': questions}))
 
-@app.route('/submit_answer', methods=['POST'])
+@app.route('/submit-answer', methods=['POST', 'OPTIONS'])
 def submit_answer():
+    if request.method == 'OPTIONS':
+        return _build_preflight_response()
+    
     data = request.get_json()
     question = data.get('question')
     answer = data.get('answer')
@@ -79,11 +121,26 @@ def submit_answer():
                 else:
                     rating = None
 
-    return jsonify({
+    return _build_actual_response(jsonify({
         'feedback': feedback_text,
         'rating': rating
-    })
+    }))
 
-# يضيف ملف التطبيق ليعمل كـ "Serverless Function"
+def _build_preflight_response():
+    """بناء استجابة Preflight لطلبات OPTIONS"""
+    response = jsonify({'status': 'ok'})
+    response.headers.add('Access-Control-Allow-Origin', ', '.join(ALLOWED_ORIGINS))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    return response
+
+def _build_actual_response(response):
+    """إضافة رؤوس CORS للاستجابات الفعلية"""
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
+
 if __name__ == "__main__":
     app.run(debug=True)
