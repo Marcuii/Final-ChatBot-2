@@ -1,0 +1,4 @@
+Flask==2.x
+openai==x.x.x
+vaderSentiment==x.x.x
+python-dotenv==x.x.x
