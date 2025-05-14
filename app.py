@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import openai
 import os
 import re
@@ -14,9 +13,6 @@ model_name = "gpt-3.5-turbo"
 analyzer = SentimentIntensityAnalyzer()
 
 app = Flask(__name__)
-
-# تمكين CORS للجميع
-CORS(app)  # هذا السطر يسمح بالوصول من أي domain
 
 # ---- وظيفة توليد الأسئلة ----
 def generate_questions(role):
@@ -36,32 +32,15 @@ def generate_questions(role):
     questions = [line.strip() for line in lines if line.strip() and "?" in line]
     return questions
 
-@app.route('/start-interview', methods=['POST', 'OPTIONS'])
+@app.route('/start-interview', methods=['POST'])
 def start_interview():
-    if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', '*')
-        response.headers.add('Access-Control-Allow-Methods', '*')
-        return response
-    
     data = request.get_json()
     job_role = data.get('job_role', 'Data Scientist')
     questions = generate_questions(job_role)
-    
-    response = jsonify({'questions': questions})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    return jsonify({'questions': questions})
 
-@app.route('/submit-answer', methods=['POST', 'OPTIONS'])
+@app.route('/submit-answer', methods=['POST'])
 def submit_answer():
-    if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', '*')
-        response.headers.add('Access-Control-Allow-Methods', '*')
-        return response
-    
     data = request.get_json()
     question = data.get('question')
     answer = data.get('answer')
@@ -97,14 +76,12 @@ def submit_answer():
                 rating_value = int(match.group())
                 break
 
-    # حذف سطر Rating
     feedback_body = "\n".join([line for line in feedback_lines if not line.strip().startswith("Rating:")])
 
-    response = jsonify({
+    return jsonify({
         'feedback': feedback_body.strip(),
         'rating': rating_value
     })
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+
 if __name__ == "__main__":
     app.run(debug=True)
