@@ -29,7 +29,7 @@ def generate_questions(role):
         messages=[{"role": "user", "content": prompt}],
         temperature=1.0,
         top_p=1.0,
-        max_tokens=1000,
+        max_tokens=400,
     )
     content = response.choices[0].message.content.strip()
     lines = content.split("\n")
