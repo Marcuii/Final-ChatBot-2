@@ -1,5 +1,5 @@
 Flask
-openai==0.28.1
+openai
 vaderSentiment
 python-dotenv
 flask-cors
