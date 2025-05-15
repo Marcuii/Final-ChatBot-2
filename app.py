@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  
+from flask_cors import CORS
 import openai
 import os
 import re
@@ -15,8 +15,8 @@ analyzer = SentimentIntensityAnalyzer()
 
 app = Flask(__name__)
 
-# ✅ تفعيل CORS فقط لهذا الدومين
-CORS(app, resources={r"/*": {"origins": "https://vocanova.vercel.app"}})
+# تمكين CORS للجميع
+CORS(app)  # هذا السطر يسمح بالوصول من أي domain
 
 # ---- وظيفة توليد الأسئلة ----
 def generate_questions(role):
@@ -36,15 +36,32 @@ def generate_questions(role):
     questions = [line.strip() for line in lines if line.strip() and "?" in line]
     return questions
 
-@app.route('/start-interview', methods=['POST'])
+@app.route('/start-interview', methods=['POST', 'OPTIONS'])
 def start_interview():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', '*')
+        response.headers.add('Access-Control-Allow-Methods', '*')
+        return response
+    
     data = request.get_json()
     job_role = data.get('job_role', 'Data Scientist')
     questions = generate_questions(job_role)
-    return jsonify({'questions': questions})
+    
+    response = jsonify({'questions': questions})
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
-@app.route('/submit-answer', methods=['POST'])
+@app.route('/submit-answer', methods=['POST', 'OPTIONS'])
 def submit_answer():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', '*')
+        response.headers.add('Access-Control-Allow-Methods', '*')
+        return response
+    
     data = request.get_json()
     question = data.get('question')
     answer = data.get('answer')
@@ -80,12 +97,14 @@ def submit_answer():
                 rating_value = int(match.group())
                 break
 
+    # حذف سطر Rating
     feedback_body = "\n".join([line for line in feedback_lines if not line.strip().startswith("Rating:")])
 
-    return jsonify({
+    response = jsonify({
         'feedback': feedback_body.strip(),
         'rating': rating_value
     })
-
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 if __name__ == "__main__":
     app.run(debug=True)
