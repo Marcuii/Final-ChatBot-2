@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  
 import openai
 import os
 import re
@@ -13,6 +14,9 @@ model_name = "gpt-3.5-turbo"
 analyzer = SentimentIntensityAnalyzer()
 
 app = Flask(__name__)
+
+# ✅ تفعيل CORS فقط لهذا الدومين
+CORS(app, resources={r"/*": {"origins": "https://vocanova.vercel.app"}})
 
 # ---- وظيفة توليد الأسئلة ----
 def generate_questions(role):
