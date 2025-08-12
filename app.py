@@ -1,30 +1,37 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 import os
 import re
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from dotenv import load_dotenv
 
-# تحميل متغيرات البيئة
+# Load environment variables
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+GROQ_API_KEY = os.getenv("OPENAI_API_KEY")
 
-model_name = "gpt-3.5-turbo"
+# Initialize Groq client
+client = OpenAI(
+    api_key=GROQ_API_KEY,
+    base_url="https://api.groq.com/openai/v1"  # Groq endpoint
+)
+
+# Choose a valid Groq model
+# You can check available models with the models endpoint if unsure
+model_name = "llama-3.3-70b-versatile"  # Example: powerful general-purpose model
+
 analyzer = SentimentIntensityAnalyzer()
 
 app = Flask(__name__)
+CORS(app)  # Allow access from any domain
 
-# تمكين CORS للجميع
-CORS(app)  # هذا السطر يسمح بالوصول من أي domain
-
-# ---- وظيفة توليد الأسئلة ----
+# ---- Generate interview questions ----
 def generate_questions(role):
     prompt = (
         f"Generate 3 behavioral and 2 technical interview questions for a {role} role. "
         "Please list only the questions, numbered."
     )
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model=model_name,
         messages=[{"role": "user", "content": prompt}],
         temperature=1.0,
@@ -77,7 +84,7 @@ def submit_answer():
         f"Rating: X/10"
     )
 
-    feedback_response = openai.chat.completions.create(
+    feedback_response = client.chat.completions.create(
         model=model_name,
         messages=[{"role": "user", "content": feedback_prompt}],
         temperature=0.7,
@@ -87,7 +94,6 @@ def submit_answer():
 
     full_feedback = feedback_response.choices[0].message.content.strip()
 
-    rating = None
     rating_value = None
     feedback_lines = full_feedback.split('\n')
     for line in feedback_lines:
@@ -97,7 +103,7 @@ def submit_answer():
                 rating_value = int(match.group())
                 break
 
-    # حذف سطر Rating
+    # Remove "Rating" line
     feedback_body = "\n".join([line for line in feedback_lines if not line.strip().startswith("Rating:")])
 
     response = jsonify({
@@ -106,4 +112,3 @@ def submit_answer():
     })
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
-   
