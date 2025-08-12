@@ -76,8 +76,7 @@ def submit_answer():
     sentiment = analyzer.polarity_scores(answer)
     
     feedback_prompt = (
-        f"Evaluate how well the following answer responds to the interview question "
-        f"in terms of relevance, completeness, and clarity.\n\n"
+        f"Evaluate how well the following answer responds to the interview question.\n\n"
         f"Question: {question}\n"
         f"Answer: {answer}\n\n"
         f"Provide detailed feedback, then add a score out of 10 using this format:\n"
